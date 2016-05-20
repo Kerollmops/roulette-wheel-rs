@@ -99,23 +99,23 @@ impl<'a, T: Clone> From<&'a [T]> for RouletteWheel<T> {
 // }
 
 impl<T> RouletteWheel<T> {
-    /// create a new random-wheel from vector.
-    /// # Example
-    ///
-    /// ```
-    /// use roulette_wheel::RouletteWheel;
-    ///
-    /// let numbers: Vec<_> = (0..20).collect();
-    ///
-    /// // default probability is set to 1.0 for each element
-    /// let rw: RouletteWheel<u8> = RouletteWheel::from_vec(numbers);
-    /// ```
-    pub fn from_vec(vector: Vec<T>) -> RouletteWheel<T> {
-        RouletteWheel {
-            proba_sum: vector.len() as f32,
-            cards: repeat(1.0).into_iter().zip(vector).collect()
-        }
-    }
+    // /// create a new random-wheel from vector.
+    // /// # Example
+    // ///
+    // /// ```
+    // /// use roulette_wheel::RouletteWheel;
+    // ///
+    // /// let numbers: Vec<_> = (0..20).collect();
+    // ///
+    // /// // default probability is set to 1.0 for each element
+    // /// let rw: RouletteWheel<u8> = RouletteWheel::from_vec(numbers);
+    // /// ```
+    // pub fn from_vec(vector: Vec<T>) -> RouletteWheel<T> {
+    //     RouletteWheel {
+    //         proba_sum: vector.len() as f32,
+    //         cards: repeat(1.0).into_iter().zip(vector).collect()
+    //     }
+    // }
 
     /// create a new empty random-wheel.
     /// # Example

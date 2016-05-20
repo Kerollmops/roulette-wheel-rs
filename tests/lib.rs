@@ -58,6 +58,8 @@ mod tests {
         assert_eq!(wheel.proba_sum(), 11.5);
     }
 
+    // TODO test RouletteWheel::form(&vec);
+
     /*
     // no clone struct
     #[derive(PartialEq, Eq, Debug)] // for assert!
