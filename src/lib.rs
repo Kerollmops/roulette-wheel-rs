@@ -1,4 +1,4 @@
-//! A Little implementation of the random-wheel principle, `RouletteWheel<T>`.
+//! A Little implementation of the roulette-wheel principle, `RouletteWheel<T>`.
 //! https://wikipedia.org/wiki/Fitness_proportionate_selection
 //!
 //! ![Fitness proportionate selection](https://upload.wikimedia.org/wikipedia/commons/2/2a/Fitness_proportionate_selection_example.png)
@@ -6,7 +6,7 @@
 //! # Usage
 //!
 //! You can get this package on the
-//! [crates.io/random-wheel](https://crates.io/crates/random-wheel) page.
+//! [crates.io/roulette-wheel](https://crates.io/crates/roulette-wheel) page.
 //!
 //! # Examples
 //!
@@ -18,7 +18,7 @@
 //! let rw: RouletteWheel<u8> = RouletteWheel::new();
 //! ```
 //!
-//! You can `push` values onto the random-wheel (which will grow the wheel as needed):
+//! You can `push` values onto the roulette-wheel (which will grow the wheel as needed):
 //!
 //! Popping values works in much the same way:
 //!
