@@ -1,0 +1,11 @@
+[package]
+name = "roulette-wheel"
+version = "0.3.1"
+authors = ["Kero <renault.cle@gmail.com>"]
+documentation = "https://kerosene2000.github.io/roulette-wheel-rs-doc/roulette-wheel-rs/roulette_wheel/index.html"
+description = "A little implementation of roulette wheels (used in genetic algorithm for selection)"
+license = "AML"
+repository = "https://github.com/Kerosene2000/roulette-wheel-rs"
+
+[dependencies]
+rand = "0.3"
