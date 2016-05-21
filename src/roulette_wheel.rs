@@ -25,8 +25,11 @@ impl<T: Clone> Clone for RouletteWheel<T> {
 }
 
 impl<T> Default for RouletteWheel<T> {
-    fn default() -> Self {
-        Self::new()
+    fn default() -> RouletteWheel<T> {
+        RouletteWheel {
+            proba_sum: 0.0,
+            cards: VecDeque::new()
+        }
     }
 }
 
@@ -39,74 +42,14 @@ impl<'a, T: Clone> From<&'a [T]> for RouletteWheel<T> {
     }
 }
 
-/// This struct is given by the `iter_mut()` method and is here to help you modifing
-/// each element fitness: when you `set_fitness()` the `RouletteWheel::proba_sum`
-/// is updated automatically.
-pub struct FitnessModifier<'a, T: 'a> {
-    wheel: &'a mut RouletteWheel<T>,
-    value: &'a mut (f32, T)
-}
-
-impl<'a, T> FitnessModifier<'a, T> {
-    /// read (proba, data) of each element
-    /// ```
-    /// use roulette_wheel::RouletteWheel;
-    ///
-    /// let rw: RouletteWheel<u8> = RouletteWheel::new();
-    ///
-    /// rw.push(1.0, 'r');
-    /// rw.push(1.0, 'c');
-    /// rw.push(1.0, 'a');
-    ///
-    /// // fm for FitnessModifier
-    /// for fm in rw.iter_mut() {
-    ///     let &mut (proba, _) = fm.read();
-    ///     println!("({}, _)", proba);
-    /// }
-    /// ```
-    pub fn read(&'a self) -> &'a (f32, T) {
-        self.value
-    }
-
-    /// update the probability of each element to be catch
-    /// ```
-    /// use roulette_wheel::RouletteWheel;
-    ///
-    /// let rw: RouletteWheel<u8> = RouletteWheel::new();
-    ///
-    /// rw.push(1.0, 'r');
-    /// rw.push(1.0, 'c');
-    /// rw.push(1.0, 'a');
-    /// assert!(rw.proba_sum(), 3.0);
-    ///
-    /// // fm for FitnessModifier
-    /// for fm in rw.iter_mut() {
-    ///     fm.set_proba(2.0);
-    /// }
-    /// assert!(rw.proba_sum(), 6.0);
-    /// ```
-    pub fn set_proba(&'a self, new: f32) {
-        let &mut (ref mut proba, _) = self.value;
-        self.wheel.proba_sum -= *proba;
-        self.wheel.proba_sum += new;
-        *proba = new;
-    }
-}
-
-pub struct FitnessIterMut<'a, T: 'a> {
-    wheel: &'a mut RouletteWheel<T>,
-    iterator: &'a mut IterMut<'a, (f32, T)>
-}
-
-impl<'a, T> Iterator for FitnessIterMut<'a, T> {
-    type Item = FitnessModifier<'a, T>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(value) = self.iterator.next() {
-            Some(FitnessModifier { wheel: self.wheel, value: value })
+impl<'a, T: Clone> From<&'a [(f32, T)]> for RouletteWheel<T> {
+    fn from(s: &'a [(f32, T)]) -> RouletteWheel<T> {
+        for &(proba, _) in s {
+            assert!(proba > 0.0, "proba {} is lower or equal to zero!", proba);
         }
-        else {
-            None
+        RouletteWheel {
+            proba_sum: s.iter().fold(0.0, |acc, &(proba, _)| acc + proba),
+            cards: VecDeque::from_iter(s.iter().cloned())
         }
     }
 }
@@ -121,9 +64,7 @@ impl<T> RouletteWheel<T> {
     /// let rw: RouletteWheel<u8> = RouletteWheel::new();
     /// ```
     pub fn new() -> RouletteWheel<T> {
-
         RouletteWheel {
-
             proba_sum: 0.0,
             cards: VecDeque::new()
         }
@@ -266,7 +207,8 @@ impl<T> RouletteWheel<T> {
 
     /// Will recompute the probabilities sum
     /// use it when you iterate through this vector and change proba values
-    pub fn compute_proba_sum(&mut self) {
+    /// TODO check if proba become Inf too
+    pub fn update_proba_sum(&mut self) {
         self.proba_sum = 0.0;
         for &(proba, _) in self.cards.iter() {
             assert!(proba > 0.0, "proba '{}' is lower or equal to zero!", proba);
@@ -419,5 +361,28 @@ impl<T> RouletteWheel<T> {
     /// ```
     pub fn iter(&self) -> Iter<(f32, T)> {
         self.cards.iter()
+    }
+
+    /// Returns a mutable iterator over the slice, giving &mut (proba, elem).
+    /// # Example
+    ///
+    /// ```
+    /// use roulette_wheel::RouletteWheel;
+    ///
+    /// let mut rw = RouletteWheel::new();
+    ///
+    /// rw.push(1.0, 'r');
+    /// rw.push(1.0, 'c');
+    /// rw.push(1.0, 'a');
+    ///
+    /// let mut iter = rw.iter();
+    ///
+    /// assert_eq!(iter.next(), Some(&(1.0, 'r')));
+    /// assert_eq!(iter.next(), Some(&(1.0, 'c')));
+    /// assert_eq!(iter.next(), Some(&(1.0, 'a')));
+    /// assert_eq!(iter.next(), None);
+    /// ```
+    pub fn iter_mut(&mut self) -> IterMut<(f32, T)> {
+        self.cards.iter_mut()
     }
 }
