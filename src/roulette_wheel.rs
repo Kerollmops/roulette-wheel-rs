@@ -2,11 +2,9 @@ extern crate rand;
 
 use std::convert::From;
 use std::default::Default;
-use std::iter::FromIterator;
-
-use std::iter::repeat;
+use std::iter::{FromIterator, Iterator, repeat};
 use std::collections::VecDeque;
-// use std::collections::vec_deque::{ IntoIter, Iter, IterMut };
+use std::collections::vec_deque::{Iter, IterMut};
 use self::rand::Rng;
 
 /// a little implementation of a random-wheel.
@@ -41,82 +39,79 @@ impl<'a, T: Clone> From<&'a [T]> for RouletteWheel<T> {
     }
 }
 
-// impl<T> IntoIterator for RouletteWheel<T> {
+/// This struct is given by the `iter_mut()` method and is here to help you modifing
+/// each element fitness: when you `set_fitness()` the `RouletteWheel::proba_sum`
+/// is updated automatically.
+pub struct FitnessModifier<'a, T: 'a> {
+    wheel: &'a mut RouletteWheel<T>,
+    value: &'a mut (f32, T)
+}
 
-//     type Item = (f32, T);
-//     type IntoIter = IntoIter<(f32, T)>;
+impl<'a, T> FitnessModifier<'a, T> {
+    /// read (proba, data) of each element
+    /// ```
+    /// use roulette_wheel::RouletteWheel;
+    ///
+    /// let rw: RouletteWheel<u8> = RouletteWheel::new();
+    ///
+    /// rw.push(1.0, 'r');
+    /// rw.push(1.0, 'c');
+    /// rw.push(1.0, 'a');
+    ///
+    /// // fm for FitnessModifier
+    /// for fm in rw.iter_mut() {
+    ///     let &mut (proba, _) = fm.read();
+    ///     println!("({}, _)", proba);
+    /// }
+    /// ```
+    pub fn read(&'a self) -> &'a (f32, T) {
+        self.value
+    }
 
-//     /// Creates a consuming iterator, that is, one that moves each value out of
-//     /// the rouletteWheel (from start to end).
-//     #[inline]
-//     fn into_iter(self) -> IntoIter<(f32, T)> {
-//         self.cards.into_iter()
-//     }
-// }
+    /// update the probability of each element to be catch
+    /// ```
+    /// use roulette_wheel::RouletteWheel;
+    ///
+    /// let rw: RouletteWheel<u8> = RouletteWheel::new();
+    ///
+    /// rw.push(1.0, 'r');
+    /// rw.push(1.0, 'c');
+    /// rw.push(1.0, 'a');
+    /// assert!(rw.proba_sum(), 3.0);
+    ///
+    /// // fm for FitnessModifier
+    /// for fm in rw.iter_mut() {
+    ///     fm.set_proba(2.0);
+    /// }
+    /// assert!(rw.proba_sum(), 6.0);
+    /// ```
+    pub fn set_proba(&'a self, new: f32) {
+        let &mut (ref mut proba, _) = self.value;
+        self.wheel.proba_sum -= *proba;
+        self.wheel.proba_sum += new;
+        *proba = new;
+    }
+}
 
-// pub struct ProbaModifier<T> {
-//     container: RouletteWheel<T>, // need &'a mut !!!
-//     position: usize
-// }
+pub struct FitnessIterMut<'a, T: 'a> {
+    wheel: &'a mut RouletteWheel<T>,
+    iterator: &'a mut IterMut<'a, (f32, T)>
+}
 
-// impl<T> ProbaModifier<T> {
+impl<'a, T> Iterator for FitnessIterMut<'a, T> {
+    type Item = FitnessModifier<'a, T>;
 
-//     pub fn read(&self) -> &(f32, T) {
-//         &self.container.cards[self.position]
-//     }
-
-//     pub fn update(&mut self, new_proba: f32) {
-
-//         let card = &mut self.container.cards[self.position];
-//         self.container.proba_sum += card.0 - new_proba;
-//         card.0 = new_proba;
-//     }
-// }
-
-// impl<T> IntoIterator for RouletteWheel<T> {
-
-//     type Item = ProbaModifier<T>;
-//     type IntoIter = IntoIter<T>;
-
-//     fn into_iter(self) -> IntoIter<T> {
-//         IntoIter(ProbaModifier{
-//             container: self,
-//             position: 0
-//         })
-//     }
-// }
-
-// pub struct IntoIter<T>(ProbaModifier<T>);
-
-// impl<T> Iterator for IntoIter<T> {
-
-//     type Item = ProbaModifier<T>;
-
-//     fn next(&mut self) -> Option<ProbaModifier<T>> {
-//         // Some(self.0)
-//         None
-//     }
-// }
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(value) = self.iterator.next() {
+            Some(FitnessModifier { wheel: self.wheel, value: value })
+        }
+        else {
+            None
+        }
+    }
+}
 
 impl<T> RouletteWheel<T> {
-    // /// create a new random-wheel from vector.
-    // /// # Example
-    // ///
-    // /// ```
-    // /// use roulette_wheel::RouletteWheel;
-    // ///
-    // /// let numbers: Vec<_> = (0..20).collect();
-    // ///
-    // /// // default probability is set to 1.0 for each element
-    // /// let rw: RouletteWheel<u8> = RouletteWheel::from_vec(numbers);
-    // /// ```
-    // pub fn from_vec(vector: Vec<T>) -> RouletteWheel<T> {
-    //     RouletteWheel {
-    //         proba_sum: vector.len() as f32,
-    //         cards: repeat(1.0).into_iter().zip(vector).collect()
-    //     }
-    // }
-
     /// create a new empty random-wheel.
     /// # Example
     ///
@@ -141,7 +136,7 @@ impl<T> RouletteWheel<T> {
     /// use roulette_wheel::RouletteWheel;
     ///
     /// let numbers: Vec<_> = (0..20).collect();
-    /// let mut rw: RouletteWheel<u8> = RouletteWheel::with_capacity(numbers.len());
+    /// let rw: RouletteWheel<u8> = RouletteWheel::with_capacity(numbers.len());
     ///
     /// assert_eq!(rw.len(), 0);
     /// ```
@@ -160,7 +155,7 @@ impl<T> RouletteWheel<T> {
     /// ```
     /// use roulette_wheel::RouletteWheel;
     ///
-    /// let mut rw: RouletteWheel<u8> = RouletteWheel::new();
+    /// let rw: RouletteWheel<u8> = RouletteWheel::new();
     /// rw.reserve(20);
     ///
     /// assert_eq!(rw.len(), 0);
@@ -194,14 +189,34 @@ impl<T> RouletteWheel<T> {
     ///
     /// assert_eq!(rw.len(), 0);
     ///
-    /// rw.push(1., 'r');
-    /// rw.push(1., 'c');
-    /// rw.push(1., 'a');
+    /// rw.push(1.0, 'r');
+    /// rw.push(1.0, 'c');
+    /// rw.push(1.0, 'a');
     ///
     /// assert_eq!(rw.len(), 3);
     /// ```
     pub fn len(&self) -> usize {
         self.cards.len()
+    }
+
+    /// returns `true` if empty else return `false`.
+    /// # Example
+    ///
+    /// ```
+    /// use roulette_wheel::RouletteWheel;
+    ///
+    /// let mut rw = RouletteWheel::new();
+    ///
+    /// assert_eq!(rw.is_empty(), true);
+    ///
+    /// rw.push(1.0, 'r');
+    /// rw.push(1.0, 'c');
+    /// rw.push(1.0, 'a');
+    ///
+    /// assert_eq!(rw.is_empty(), false);
+    /// ```
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// remove all elements in this wheel.
@@ -212,9 +227,9 @@ impl<T> RouletteWheel<T> {
     ///
     /// let mut rw = RouletteWheel::new();
     ///
-    /// rw.push(1., 'r');
-    /// rw.push(1., 'c');
-    /// rw.push(1., 'a');
+    /// rw.push(1.0, 'r');
+    /// rw.push(1.0, 'c');
+    /// rw.push(1.0, 'a');
     ///
     /// assert_eq!(rw.len(), 3);
     ///
@@ -226,71 +241,6 @@ impl<T> RouletteWheel<T> {
         self.cards.clear()
     }
 
-    /// returns `true` if this wheel is empty else return `false`.
-    /// # Example
-    ///
-    /// ```
-    /// use roulette_wheel::RouletteWheel;
-    ///
-    /// let mut rw = RouletteWheel::new();
-    ///
-    /// assert_eq!(rw.is_empty(), true);
-    ///
-    /// rw.push(1., 'r');
-    /// rw.push(1., 'c');
-    /// rw.push(1., 'a');
-    ///
-    /// assert_eq!(rw.is_empty(), false);
-    /// ```
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    // /// Returns an iterator over the slice.
-    // /// # Example
-    // ///
-    // /// ```
-    // /// use roulette_wheel::RouletteWheel;
-    // ///
-    // /// let mut rw = RouletteWheel::new();
-    // ///
-    // /// rw.push(1., 'r');
-    // /// rw.push(1., 'c');
-    // /// rw.push(1., 'a');
-    // ///
-    // /// let mut iter = rw.iter();
-    // ///
-    // /// assert_eq!(iter.next(), Some(&(1.0, 'r')));
-    // /// assert_eq!(iter.next(), Some(&(1.0, 'c')));
-    // /// assert_eq!(iter.next(), Some(&(1.0, 'a')));
-    // /// assert_eq!(iter.next(), None);
-    // /// ```
-    // pub fn iter(&self) -> Iter<(f32, T)> {
-    //     self.cards.iter()
-    // }
-
-    // /// Returns an iterator that allows modifying each value.
-    // /// # Example
-    // ///
-    // /// ```
-    // /// use roulette_wheel::RouletteWheel;
-    // ///
-    // /// let mut rw = RouletteWheel::new();
-    // ///
-    // /// rw.push(1., 'r');
-    // /// rw.push(1., 'c');
-    // /// rw.push(1., 'a');
-    // ///
-    // /// for a in &mut rw.iter_mut() {
-    // ///     a.1 = 'm';
-    // /// }
-    // ///
-    // /// assert_eq!(rw.peek(), Some((1., &'m')));
-    // /// ```
-    // pub fn iter_mut(&mut self) -> IterMut<(f32, T)> {
-    //     self.cards.iter_mut()
-    // }
-
     /// add an element associated with a probability.
     /// # Example
     ///
@@ -299,9 +249,9 @@ impl<T> RouletteWheel<T> {
     ///
     /// let mut rw = RouletteWheel::new();
     ///
-    /// rw.push(1., 'r');
-    /// rw.push(1., 'c');
-    /// rw.push(1., 'a');
+    /// rw.push(1.0, 'r');
+    /// rw.push(1.0, 'c');
+    /// rw.push(1.0, 'a');
     ///
     /// assert_eq!(rw.len(), 3);
     /// ```
@@ -377,7 +327,7 @@ impl<T> RouletteWheel<T> {
     ///
     /// let mut rw = RouletteWheel::new();
     ///
-    /// rw.push(1., 'r');
+    /// rw.push(1.0, 'r');
     ///
     /// assert_eq!(rw.peek(), Some((1.0, &'r')));
     /// assert_eq!(rw.peek(), Some((1.0, &'r')));
@@ -401,7 +351,7 @@ impl<T> RouletteWheel<T> {
     ///
     /// let mut rw = RouletteWheel::new();
     ///
-    /// rw.push(1., 'r');
+    /// rw.push(1.0, 'r');
     ///
     /// match rw.peek_mut() {
     ///     Some((_, val)) => *val = 'b',
@@ -429,7 +379,7 @@ impl<T> RouletteWheel<T> {
     ///
     /// let mut rw = RouletteWheel::new();
     ///
-    /// rw.push(1., 'r');
+    /// rw.push(1.0, 'r');
     ///
     /// assert_eq!(rw.pop(), Some((1.0, 'r')));
     ///
@@ -446,5 +396,28 @@ impl<T> RouletteWheel<T> {
             else { None }
         }
         else { None }
+    }
+
+    /// Returns an iterator over the slice, giving &(proba, elem).
+    /// # Example
+    ///
+    /// ```
+    /// use roulette_wheel::RouletteWheel;
+    ///
+    /// let mut rw = RouletteWheel::new();
+    ///
+    /// rw.push(1.0, 'r');
+    /// rw.push(1.0, 'c');
+    /// rw.push(1.0, 'a');
+    ///
+    /// let mut iter = rw.iter();
+    ///
+    /// assert_eq!(iter.next(), Some(&(1.0, 'r')));
+    /// assert_eq!(iter.next(), Some(&(1.0, 'c')));
+    /// assert_eq!(iter.next(), Some(&(1.0, 'a')));
+    /// assert_eq!(iter.next(), None);
+    /// ```
+    pub fn iter(&self) -> Iter<(f32, T)> {
+        self.cards.iter()
     }
 }
