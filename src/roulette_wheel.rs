@@ -96,7 +96,7 @@ impl<T> RouletteWheel<T> {
     /// ```
     /// use roulette_wheel::RouletteWheel;
     ///
-    /// let rw: RouletteWheel<u8> = RouletteWheel::new();
+    /// let mut rw: RouletteWheel<u8> = RouletteWheel::new();
     /// rw.reserve(20);
     ///
     /// assert_eq!(rw.len(), 0);
