@@ -2,7 +2,7 @@ extern crate rand;
 
 use std::convert::From;
 use std::default::Default;
-use std::iter::{FromIterator, Iterator, repeat};
+use std::iter::{FromIterator, Iterator};
 use std::collections::VecDeque;
 use std::collections::vec_deque::Iter;
 use self::rand::Rng;
@@ -33,15 +33,6 @@ impl<T> Default for RouletteWheel<T> {
     }
 }
 
-// impl<'a, T: Clone> From<&'a [T]> for RouletteWheel<T> {
-//     fn from(s: &'a [T]) -> RouletteWheel<T> {
-//         RouletteWheel {
-//             proba_sum: s.len() as f32,
-//             cards: VecDeque::from_iter(repeat(1.0).zip(s.iter().cloned()))
-//         }
-//     }
-// }
-
 impl<'a, T: Clone> From<&'a [(f32, T)]> for RouletteWheel<T> {
     fn from(s: &'a [(f32, T)]) -> RouletteWheel<T> {
         for &(proba, _) in s {
@@ -53,6 +44,25 @@ impl<'a, T: Clone> From<&'a [(f32, T)]> for RouletteWheel<T> {
             proba_sum: proba_sum,
             cards: VecDeque::from_iter(s.iter().cloned())
         }
+    }
+}
+
+pub struct ModifierIter<'a, T: 'a> {
+    container: &'a mut RouletteWheel<T>
+}
+
+impl<'a, T> Iterator for ModifierIter<'a, T> {
+    type Item = &'a mut (f32, T);
+
+    fn next(&mut self) -> Option<&'a mut (f32, T)> {
+        // self.container
+        None
+    }
+}
+
+impl<'a, T> Drop for ModifierIter<'a, T> {
+    fn drop(&mut self) {
+        println!("ModifierIter need to update probabilities now!");
     }
 }
 
@@ -340,6 +350,10 @@ impl<T> RouletteWheel<T> {
     /// ```
     pub fn pop_iter(&mut self) -> PopIter<T> {
         PopIter { container: self }
+    }
+
+    pub fn modifier_iter(&mut self) -> ModifierIter<T> {
+        ModifierIter { container: self }
     }
 }
 
