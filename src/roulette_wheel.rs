@@ -4,7 +4,7 @@ use std::convert::From;
 use std::default::Default;
 use std::iter::{FromIterator, Iterator};
 use std::collections::VecDeque;
-use std::collections::vec_deque::Iter;
+use std::collections::vec_deque::{Iter, IterMut};
 use self::rand::Rng;
 
 /// a little implementation of a random-wheel.
@@ -48,15 +48,15 @@ impl<'a, T: Clone> From<&'a [(f32, T)]> for RouletteWheel<T> {
 }
 
 pub struct ModifierIter<'a, T: 'a> {
-    container: &'a mut RouletteWheel<T>
+    proba_sum: &'a mut f32,
+    iterator: IterMut<'a, (f32, T)>
 }
 
 impl<'a, T> Iterator for ModifierIter<'a, T> {
     type Item = &'a mut (f32, T);
 
     fn next(&mut self) -> Option<&'a mut (f32, T)> {
-        // self.container
-        None
+        self.iterator.next()
     }
 }
 
@@ -353,7 +353,10 @@ impl<T> RouletteWheel<T> {
     }
 
     pub fn modifier_iter(&mut self) -> ModifierIter<T> {
-        ModifierIter { container: self }
+        ModifierIter {
+            proba_sum: &mut self.proba_sum,
+            iterator: self.cards.iter_mut()
+        }
     }
 }
 
