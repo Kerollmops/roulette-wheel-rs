@@ -45,10 +45,12 @@ impl<'a, T: Clone> From<&'a [T]> for RouletteWheel<T> {
 impl<'a, T: Clone> From<&'a [(f32, T)]> for RouletteWheel<T> {
     fn from(s: &'a [(f32, T)]) -> RouletteWheel<T> {
         for &(proba, _) in s {
-            assert!(proba > 0.0, "proba {} is lower or equal to zero!", proba);
+            assert!(proba >= 0.0, "probability '{}' is lower to zero!", proba);
         }
+        let proba_sum = s.iter().fold(0.0, |acc, &(proba, _)| acc + proba);
+        assert!(proba_sum > 0.0, "probabilities must not be all zero!");
         RouletteWheel {
-            proba_sum: s.iter().fold(0.0, |acc, &(proba, _)| acc + proba),
+            proba_sum: proba_sum,
             cards: VecDeque::from_iter(s.iter().cloned())
         }
     }
@@ -197,12 +199,10 @@ impl<T> RouletteWheel<T> {
     /// assert_eq!(rw.len(), 3);
     /// ```
     pub fn push(&mut self, proba: f32, data: T) {
-        assert!(proba > 0.0, "proba {} is lower or equal to zero!", proba);
+        assert!(proba >= 0.0, "proba {} is lower to zero!", proba);
         self.cards.push_back((proba, data));
         self.proba_sum += proba;
-        if self.proba_sum.is_infinite() {
-            panic!("Probability sum reached an Inf value!");
-        }
+        assert!(!self.proba_sum.is_infinite(), "Probability sum reached an Inf value!");
     }
 
     /// Will recompute the probabilities sum
@@ -211,12 +211,10 @@ impl<T> RouletteWheel<T> {
     pub fn update_proba_sum(&mut self) {
         self.proba_sum = 0.0;
         for &(proba, _) in self.cards.iter() {
-            assert!(proba > 0.0, "proba '{}' is lower or equal to zero!", proba);
+            assert!(proba >= 0.0, "probability '{}' is lower to zero!", proba);
             self.proba_sum += proba;
         }
-        if self.proba_sum.is_infinite() {
-            panic!("Probability sum reached an Inf value!");
-        }
+        assert!(!self.proba_sum.is_infinite(), "Probability sum reached an Inf value!");
     }
 
     /// returns total of luck you pushed.
@@ -241,7 +239,7 @@ impl<T> RouletteWheel<T> {
     fn gen_random_dist(&self) -> f32 {
         match self.proba_sum {
             sum if sum > 0. => rand::thread_rng().gen_range(0., sum),
-            _               => 0.
+            _ => 0.
         }
     }
 

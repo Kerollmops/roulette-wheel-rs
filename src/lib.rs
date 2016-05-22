@@ -3,6 +3,9 @@
 //!
 //! ![Fitness proportionate selection](https://upload.wikimedia.org/wikipedia/commons/2/2a/Fitness_proportionate_selection_example.png)
 //!
+//! TODO implement this
+//! http://www.keithschwarz.com/interesting/code/?dir=alias-method
+//!
 //! # Usage
 //!
 //! You can get this package on the
