@@ -62,6 +62,7 @@ impl<'a, T> Iterator for ModifierIter<'a, T> {
 
 impl<'a, T> Drop for ModifierIter<'a, T> {
     fn drop(&mut self) {
+        // self.proba_sum = self.iterator.rev().fold(0.0, |acc, &mut (proba, _)| acc + proba);
         println!("ModifierIter need to update probabilities now!");
     }
 }
