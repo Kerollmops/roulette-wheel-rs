@@ -319,7 +319,7 @@ impl<T> RouletteWheel<T> {
     ///     *val = 'b';
     /// }
     ///
-    /// assert_eq!(rw.peek(), Some((1.0, &'b')));
+    /// assert_eq!(rw.peek(), Some(&(1.0, 'b')));
     /// ```
     pub fn peek_mut(&mut self) -> Option<(f32, &mut T)> {
         if let Some(index) = self.get_random_index() {
