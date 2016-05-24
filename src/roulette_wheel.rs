@@ -419,9 +419,9 @@ impl<T> RouletteWheel<T> {
     /// let proba_slice: &[(_, char)] = &[(1.0, 'a'), (3.0, 'b'), (0.5, 'c')];
     /// let mut rw = RouletteWheel::from(proba_slice);
     ///
-    /// for &(proba, elem) in rw.peek_iter() {
-    ///     println!("{} : {}", proba, elem);
-    /// }
+    /// // for &(proba, elem) in rw.peek_iter() {
+    /// //     println!("{} : {}", proba, elem);
+    /// // }
     /// assert!(rw.is_empty() == false);
     /// ```
     pub fn peek_iter(&self) -> PeekIter<T> {
@@ -437,9 +437,9 @@ impl<T> RouletteWheel<T> {
     /// let proba_slice: &[(_, char)] = &[(1.0, 'a'), (3.0, 'b'), (0.5, 'c')];
     /// let mut rw = RouletteWheel::from(proba_slice);
     ///
-    /// for &(proba, elem) in rw.peek_iter() {
-    ///     println!("{} : {}", proba, elem);
-    /// }
+    /// // for &(proba, elem) in rw.peek_iter() {
+    /// //     println!("{} : {}", proba, elem);
+    /// // }
     /// assert!(rw.is_empty() == false);
     /// ```
     pub fn peek_mut_iter(&mut self) -> PeekIterMut<T> {
