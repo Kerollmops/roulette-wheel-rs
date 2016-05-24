@@ -47,26 +47,6 @@ impl<'a, T: Clone> From<&'a [(f32, T)]> for RouletteWheel<T> {
     }
 }
 
-pub struct ModifierIter<'a, T: 'a> {
-    proba_sum: &'a mut f32,
-    iterator: IterMut<'a, (f32, T)>
-}
-
-impl<'a, T> Iterator for ModifierIter<'a, T> {
-    type Item = &'a mut (f32, T);
-
-    fn next(&mut self) -> Option<&'a mut (f32, T)> {
-        self.iterator.next()
-    }
-}
-
-impl<'a, T> Drop for ModifierIter<'a, T> {
-    fn drop(&mut self) {
-        // self.proba_sum = self.iterator.rev().fold(0.0, |acc, &mut (proba, _)| acc + proba);
-        println!("ModifierIter need to update probabilities now!");
-    }
-}
-
 pub struct PopIter<'a, T: 'a> {
     container: &'a mut RouletteWheel<T>
 }
@@ -76,6 +56,31 @@ impl<'a, T> Iterator for PopIter<'a, T> {
 
     fn next(&mut self) -> Option<(f32, T)> {
         self.container.pop()
+    }
+}
+
+pub struct PeekIter<'a, T: 'a> {
+    container: &'a RouletteWheel<T>
+}
+
+impl<'a, T> Iterator for PeekIter<'a, T> {
+    type Item = &'a (f32, T);
+
+    fn next(&mut self) -> Option<&'a (f32, T)> {
+        self.container.peek()
+    }
+}
+
+pub struct PeekIterMut<'a, T: 'a> {
+    container: &'a mut RouletteWheel<T>
+}
+
+impl<'a, T> Iterator for PeekIterMut<'a, T> {
+    type Item = (f32, &'a mut T);
+
+    fn next(&mut self) -> Option<(f32, &'a mut T)> {
+        // self.container.peek_mut()
+        None
     }
 }
 
@@ -247,7 +252,6 @@ impl<T> RouletteWheel<T> {
     /// use roulette_wheel::RouletteWheel;
     ///
     /// let mut rw = RouletteWheel::new();
-    ///
     /// rw.push(1.5, 'r');
     /// rw.push(2., 'c');
     /// rw.push(3., 'a');
@@ -281,6 +285,52 @@ impl<T> RouletteWheel<T> {
         else { None }
     }
 
+    /// returns a ref to the randomly peeked element with
+    /// it's probality to be peeked.
+    /// # Example
+    ///
+    /// ```
+    /// use roulette_wheel::RouletteWheel;
+    ///
+    /// let mut rw = RouletteWheel::new();
+    /// rw.push(1.0, 'r');
+    ///
+    /// assert_eq!(rw.peek(), Some(&(1.0, 'r')));
+    /// assert_eq!(rw.peek(), Some(&(1.0, 'r')));
+    /// ```
+    pub fn peek(&self) -> Option<&(f32, T)> {
+        if let Some(index) = self.get_random_index() {
+            self.cards.get(index)
+        }
+        else { None }
+    }
+
+    /// returns a mutable ref to the randomly peeked element with
+    /// it's probality to be peeked.
+    /// # Example
+    ///
+    /// ```
+    /// use roulette_wheel::RouletteWheel;
+    ///
+    /// let mut rw = RouletteWheel::new();
+    /// rw.push(1.0, 'r');
+    ///
+    /// if let Some((_, val)) = rw.peek_mut() {
+    ///     *val = 'b'
+    /// }
+    ///
+    /// assert_eq!(rw.peek(), Some((1.0, &'b')));
+    /// ```
+    pub fn peek_mut(&mut self) -> Option<(f32, &mut T)> {
+        if let Some(index) = self.get_random_index() {
+            if let Some(&mut (proba, ref mut data)) = self.cards.get_mut(index) {
+                Some((proba, data))
+            }
+            else { None }
+        }
+        else { None }
+    }
+
     /// removes a randomly peeked element and return it with
     /// it's probality to be peeked.
     /// # Example
@@ -289,7 +339,6 @@ impl<T> RouletteWheel<T> {
     /// use roulette_wheel::RouletteWheel;
     ///
     /// let mut rw = RouletteWheel::new();
-    ///
     /// rw.push(1.0, 'r');
     ///
     /// assert_eq!(rw.pop(), Some((1.0, 'r')));
@@ -316,7 +365,6 @@ impl<T> RouletteWheel<T> {
     /// use roulette_wheel::RouletteWheel;
     ///
     /// let mut rw = RouletteWheel::new();
-    ///
     /// rw.push(1.0, 'r');
     /// rw.push(1.0, 'c');
     /// rw.push(1.0, 'a');
@@ -332,14 +380,77 @@ impl<T> RouletteWheel<T> {
         self.cards.iter()
     }
 
+    /// Returns a mutable iterator over the slice, giving &mut (proba, elem).
+    /// # Warning
+    /// Don't forget to call `.update_proba_sum()` if you modify probabilities.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use roulette_wheel::RouletteWheel;
+    ///
+    /// let mut rw = RouletteWheel::new();
+    /// rw.push(1.0, 'r');
+    /// rw.push(1.0, 'c');
+    /// rw.push(1.0, 'a');
+    ///
+    /// {
+    ///     let mut iter = rw.iter();
+    ///
+    ///     assert_eq!(iter.next(), Some(&(1.0, 'r')));
+    ///     assert_eq!(iter.next(), Some(&(1.0, 'c')));
+    ///     assert_eq!(iter.next(), Some(&(1.0, 'a')));
+    ///     assert_eq!(iter.next(), None);
+    ///     // TODO implement drop() method to recompute automatically
+    /// }
+    ///
+    /// rw.update_proba_sum();
+    /// ```
+    pub fn iter_mut(&mut self) -> IterMut<(f32, T)> {
+        self.cards.iter_mut()
+    }
+
     /// Returns an iterator that pop a random element.
     /// # Example
     ///
     /// ```
     /// use roulette_wheel::RouletteWheel;
     ///
-    /// // let proba_slice: &[(f32, char)] = &[(1.0, 'a'), (3.0, 'b'), (0.5, 'c')];
-    /// // let mut rw: RouletteWheel<char> = RouletteWheel::from(proba_slice);
+    /// let proba_slice: &[(_, char)] = &[(1.0, 'a'), (3.0, 'b'), (0.5, 'c')];
+    /// let mut rw = RouletteWheel::from(proba_slice);
+    ///
+    /// for &(proba, elem) in rw.peek_iter() {
+    ///     println!("{} : {}", proba, elem);
+    /// }
+    /// assert!(rw.is_empty() == false);
+    /// ```
+    pub fn peek_iter(&self) -> PeekIter<T> {
+        PeekIter { container: self }
+    }
+
+    /// Returns an iterator that pop a random element.
+    /// # Example
+    ///
+    /// ```
+    /// use roulette_wheel::RouletteWheel;
+    ///
+    /// let proba_slice: &[(_, char)] = &[(1.0, 'a'), (3.0, 'b'), (0.5, 'c')];
+    /// let mut rw = RouletteWheel::from(proba_slice);
+    ///
+    /// for &(proba, elem) in rw.peek_iter() {
+    ///     println!("{} : {}", proba, elem);
+    /// }
+    /// assert!(rw.is_empty() == false);
+    /// ```
+    pub fn peek_mut_iter(&mut self) -> PeekIterMut<T> {
+        PeekIterMut { container: self }
+    }
+
+    /// Returns an iterator that pop a random element.
+    /// # Example
+    ///
+    /// ```
+    /// use roulette_wheel::RouletteWheel;
     ///
     /// let proba_slice: &[(_, char)] = &[(1.0, 'a'), (3.0, 'b'), (0.5, 'c')];
     /// let mut rw = RouletteWheel::from(proba_slice);
@@ -352,86 +463,4 @@ impl<T> RouletteWheel<T> {
     pub fn pop_iter(&mut self) -> PopIter<T> {
         PopIter { container: self }
     }
-
-    pub fn modifier_iter(&mut self) -> ModifierIter<T> {
-        ModifierIter {
-            proba_sum: &mut self.proba_sum,
-            iterator: self.cards.iter_mut()
-        }
-    }
 }
-
-    // /// Returns a mutable iterator over the slice, giving &mut (proba, elem).
-    // /// # Example
-    // ///
-    // /// ```
-    // /// use roulette_wheel::RouletteWheel;
-    // ///
-    // /// let mut rw = RouletteWheel::new();
-    // ///
-    // /// rw.push(1.0, 'r');
-    // /// rw.push(1.0, 'c');
-    // /// rw.push(1.0, 'a');
-    // ///
-    // /// let mut iter = rw.iter();
-    // ///
-    // /// assert_eq!(iter.next(), Some(&(1.0, 'r')));
-    // /// assert_eq!(iter.next(), Some(&(1.0, 'c')));
-    // /// assert_eq!(iter.next(), Some(&(1.0, 'a')));
-    // /// assert_eq!(iter.next(), None);
-    // /// ```
-    // pub fn iter_mut(&mut self) -> IterMut<(f32, T)> {
-    //     self.cards.iter_mut()
-    // }
-
-    // /// returns a ref to the randomly peeked element with
-    // /// it's probality to be peeked.
-    // /// # Example
-    // ///
-    // /// ```
-    // /// use roulette_wheel::RouletteWheel;
-    // ///
-    // /// let mut rw = RouletteWheel::new();
-    // ///
-    // /// rw.push(1.0, 'r');
-    // ///
-    // /// assert_eq!(rw.peek(), Some((1.0, &'r')));
-    // /// assert_eq!(rw.peek(), Some((1.0, &'r')));
-    // /// ```
-    // pub fn peek(&self) -> Option<(f32, &T)> {
-    //     if let Some(index) = self.get_random_index() {
-    //         if let Some(&(proba, ref data)) = self.cards.get(index) {
-    //             Some((proba, data))
-    //         }
-    //         else { None }
-    //     }
-    //     else { None }
-    // }
-
-    // /// returns a mutable ref to the randomly peeked element with
-    // /// it's probality to be peeked.
-    // /// # Example
-    // ///
-    // /// ```
-    // /// use roulette_wheel::RouletteWheel;
-    // ///
-    // /// let mut rw = RouletteWheel::new();
-    // ///
-    // /// rw.push(1.0, 'r');
-    // ///
-    // /// match rw.peek_mut() {
-    // ///     Some((_, val)) => *val = 'b',
-    // ///     None => {}
-    // /// }
-    // ///
-    // /// assert_eq!(rw.peek(), Some((1.0, &'b')));
-    // /// ```
-    // pub fn peek_mut(&mut self) -> Option<(f32, &mut T)> {
-    //     if let Some(index) = self.get_random_index() {
-    //         if let Some(&mut (proba, ref mut data)) = self.cards.get_mut(index) {
-    //             Some((proba, data))
-    //         }
-    //         else { None }
-    //     }
-    //     else { None }
-    // }
