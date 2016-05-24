@@ -226,9 +226,9 @@ impl<T> RouletteWheel<T> {
     ///
     /// assert_eq!(rw.len(), 3);
     /// ```
-    pub fn push(&mut self, proba: f32, data: T) {
+    pub fn push(&mut self, proba: f32, value: T) {
         assert!(proba >= 0.0, "proba {} is lower to zero!", proba);
-        self.cards.push_back((proba, data));
+        self.cards.push_back((proba, value));
         self.proba_sum += proba;
         assert!(!self.proba_sum.is_infinite(), "Probability sum reached an Inf value!");
     }
@@ -316,15 +316,15 @@ impl<T> RouletteWheel<T> {
     /// rw.push(1.0, 'r');
     ///
     /// if let Some((_, val)) = rw.peek_mut() {
-    ///     *val = 'b'
+    ///     *val = 'b';
     /// }
     ///
     /// assert_eq!(rw.peek(), Some((1.0, &'b')));
     /// ```
     pub fn peek_mut(&mut self) -> Option<(f32, &mut T)> {
         if let Some(index) = self.get_random_index() {
-            if let Some(&mut (proba, ref mut data)) = self.cards.get_mut(index) {
-                Some((proba, data))
+            if let Some(&mut (proba, ref mut value)) = self.cards.get_mut(index) {
+                Some((proba, value))
             }
             else { None }
         }
@@ -349,9 +349,9 @@ impl<T> RouletteWheel<T> {
     /// ```
     pub fn pop(&mut self) -> Option<(f32, T)> {
         if let Some(index) = self.get_random_index() {
-            if let Some((proba, data)) = self.cards.remove(index) {
+            if let Some((proba, value)) = self.cards.remove(index) {
                 self.proba_sum -= proba;
-                Some((proba, data))
+                Some((proba, value))
             }
             else { None }
         }
