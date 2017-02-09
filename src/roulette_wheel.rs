@@ -1,9 +1,6 @@
-extern crate rand;
-
-use std::iter::{FromIterator, Iterator, repeat};
-use std::collections::VecDeque;
-use std::collections::vec_deque::{Iter, IterMut};
-use self::rand::Rng;
+use std::iter::{FromIterator, Iterator, IntoIterator};
+use rand::{Rng, ThreadRng, thread_rng};
+use rand::distributions::{Range, IndependentSample};
 
 /// A roulette-wheel container
 pub struct RouletteWheel<T> {
@@ -25,10 +22,11 @@ impl<T: Clone> Clone for RouletteWheel<T> {
 impl<T> FromIterator<(f32, T)> for RouletteWheel<T> {
     fn from_iter<A>(iter: A) -> Self where A: IntoIterator<Item=(f32, T)> {
         let iter = iter.into_iter();
-        let cap = iter.size_hint().1.unwrap_or(0);
+        let (lower, _) = iter.size_hint();
+
         let mut total_fitness = 0.0;
-        let mut fitnesses = Vec::with_capacity(cap);
-        let mut population = Vec::with_capacity(cap);
+        let mut fitnesses = Vec::with_capacity(lower);
+        let mut population = Vec::with_capacity(lower);
 
         for (fitness, individual) in iter {
             total_fitness += fitness;
@@ -100,21 +98,6 @@ impl<T> RouletteWheel<T> {
         self.fitnesses.reserve(additional);
         self.population.reserve(additional);
     }
-
-    // /// Returns the number of elements the RouletteWheel can hold without
-    // /// reallocating.
-    // /// # Example
-    // ///
-    // /// ```
-    // /// use roulette_wheel::RouletteWheel;
-    // ///
-    // /// let rw: RouletteWheel<u8> = RouletteWheel::new();
-    // ///
-    // /// println!("actual capacity: {}", rw.capacity());
-    // /// ```
-    // pub fn capacity(&self) -> usize {
-    //     self.population.capacity()
-    // }
 
     /// returns the number of elements in the wheel.
     /// # Example
@@ -194,14 +177,15 @@ impl<T> RouletteWheel<T> {
     /// assert_eq!(rw.len(), 3);
     /// ```
     pub fn push(&mut self, fitness: f32, individual: T) {
-        assert!(fitness.is_finite(), "Can't push non-finite fitness {:?}", fitness);
-        assert!(fitness >= 0.0, "Can't push negative fitness {:?}", fitness);
+        assert!(fitness >= 0.0, "Can't push the less than zero fitness: {:?}", fitness);
+        assert!((self.total_fitness + fitness).is_finite(), "Fitnesses sum reached a non-finite value!");
+        unsafe { self.unchecked_push(fitness, individual) }
+    }
 
+    pub unsafe fn unchecked_push(&mut self, fitness: f32, individual: T) {
+        self.total_fitness += fitness;
         self.fitnesses.push(fitness);
         self.population.push(individual);
-        self.total_fitness += fitness;
-
-        assert!(self.total_fitness.is_finite(), "Fitnesses sum reached a non-finite state!");
     }
 
     /// Returns sum of all individual fitnesses.
@@ -222,19 +206,111 @@ impl<T> RouletteWheel<T> {
         self.total_fitness
     }
 
-    // pub fn select_one_iter(&self) -> SelectOneIter<T> {
-    //     SelectOneIter { aaa: self.population[0] }
-    // }
+    pub fn select_iter(&self) -> SelectIter<ThreadRng, T> {
+        SelectIter::<ThreadRng, _>::new(&self)
+    }
 }
 
-pub struct SelectOneIter<T> {
-    aaa: T
+pub struct SelectIter<'a, R: Rng, T: 'a> {
+    distribution_range: Range<f32>,
+    rng: R,
+    total_fitness: f32,
+    fitnesses_ids: Vec<(usize, f32)>,
+    roulette_wheel: &'a RouletteWheel<T>
 }
 
-impl<T> Iterator for SelectOneIter<T> {
-    type Item = (f32, T);
+impl<'a, R: Rng, T> SelectIter<'a, R, T> {
+    pub fn new(roulette_wheel: &'a RouletteWheel<T>) -> SelectIter<'a, ThreadRng, T> {
+        SelectIter::from_rng(roulette_wheel, thread_rng())
+    }
+
+    pub fn from_rng(roulette_wheel: &'a RouletteWheel<T>, rng: R) -> SelectIter<'a, R, T> {
+        SelectIter {
+            distribution_range: Range::new(0.0, 1.0),
+            rng: rng,
+            total_fitness: roulette_wheel.total_fitness,
+            fitnesses_ids: roulette_wheel.fitnesses.iter().cloned().enumerate().collect(),
+            roulette_wheel: roulette_wheel
+        }
+    }
+}
+
+impl<'a, R: Rng, T: 'a> Iterator for SelectIter<'a, R, T> {
+    type Item = (f32, &'a T);
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.fitnesses_ids.len(), Some(self.fitnesses_ids.len()))
+    }
 
     fn next(&mut self) -> Option<Self::Item> {
-        None
+        if !self.fitnesses_ids.is_empty() {
+            let sample = self.distribution_range.ind_sample(&mut self.rng);
+            let mut selection = sample * self.total_fitness;
+            let index = self.fitnesses_ids.iter().position(|&(_, fit)| {
+                            selection -= fit;
+                            selection <= 0.0
+                        }).unwrap();
+            let (index, fitness) = self.fitnesses_ids.swap_remove(index);
+            self.total_fitness -= fitness;
+            Some((fitness, &self.roulette_wheel.population[index]))
+        }
+        else { None }
+    }
+}
+
+impl<T> IntoIterator for RouletteWheel<T> {
+    type Item = (f32, T);
+    type IntoIter = IntoSelectIter<ThreadRng, T>;
+
+    fn into_iter(self) -> IntoSelectIter<ThreadRng, T> {
+        IntoSelectIter::<ThreadRng, _>::new(self)
+    }
+}
+
+pub struct IntoSelectIter<R: Rng, T> {
+    distribution_range: Range<f32>,
+    rng: R,
+    total_fitness: f32,
+    fitnesses: Vec<f32>,
+    population: Vec<T>
+}
+
+impl<R: Rng, T> IntoSelectIter<R, T> {
+    pub fn new(roulette_wheel: RouletteWheel<T>) -> IntoSelectIter<ThreadRng, T> {
+        IntoSelectIter::from_rng(roulette_wheel, thread_rng())
+    }
+
+    pub fn from_rng(roulette_wheel: RouletteWheel<T>, rng: R) -> IntoSelectIter<R, T> {
+        IntoSelectIter {
+            distribution_range: Range::new(0.0, 1.0),
+            rng: rng,
+            total_fitness: roulette_wheel.total_fitness,
+            fitnesses: roulette_wheel.fitnesses,
+            population: roulette_wheel.population
+        }
+    }
+}
+
+impl<R: Rng, T> Iterator for IntoSelectIter<R, T> {
+    type Item = (f32, T);
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.fitnesses.len(), Some(self.fitnesses.len()))
+    }
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if !self.fitnesses.is_empty() {
+            let sample = self.distribution_range.ind_sample(&mut self.rng);
+            let mut selection = sample * self.total_fitness;
+            let index = self.fitnesses.iter().position(|fit| {
+                            selection -= *fit;
+                            selection <= 0.0
+                        }).unwrap();
+            let fitness = self.fitnesses.swap_remove(index);
+            let individual = self.population.swap_remove(index);
+            self.total_fitness -= fitness;
+            Some((fitness, individual))
+        }
+        else { None }
     }
 }

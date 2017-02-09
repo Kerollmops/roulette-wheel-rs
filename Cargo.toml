@@ -2,8 +2,11 @@
 name = "roulette-wheel"
 version = "0.1.0"
 authors = ["Kero <renault.cle@gmail.com>"]
-documentation = "https://kerosene2000.github.io/roulette-wheel-rs-doc/roulette-wheel-rs/roulette_wheel/index.html"
-description = "A little implementation of roulette wheels (used in genetic algorithm for selection)"
+documentation = "http://docs.rs/roulette-wheel"
+description = """
+A roulette wheel selection container, used in genetic algorithm
+for fitness proportionate selection.
+"""
 license = "AML"
 repository = "https://github.com/Kerosene2000/roulette-wheel-rs"
 

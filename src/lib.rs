@@ -37,5 +37,7 @@
 //! let a_or_b = rw.pop();
 //! ```
 
+extern crate rand;
+
 mod roulette_wheel;
 pub use roulette_wheel::RouletteWheel;
