@@ -366,7 +366,7 @@ mod tests {
     const SEED: [usize; 4] = [4, 2, 42, 4242];
 
     #[test]
-    fn select_iter_seeded() {
+    fn test_select_iter_seeded() {
         let rng = StdRng::from_seed(&SEED);
 
         let fitnesses = [0.1, 0.2, 0.3, 0.4, 0.5];
@@ -385,7 +385,7 @@ mod tests {
     }
 
     #[test]
-    fn into_select_iter_seeded() {
+    fn test_into_select_iter_seeded() {
         let rng = StdRng::from_seed(&SEED);
 
         let fitnesses = [0.1, 0.2, 0.3, 0.4, 0.5];
