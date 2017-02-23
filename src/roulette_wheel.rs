@@ -52,7 +52,7 @@ impl<T> RouletteWheel<T> {
     /// ```
     /// use roulette_wheel::RouletteWheel;
     ///
-    /// let rw: RouletteWheel<u8> = RouletteWheel::new();
+    /// let rw = RouletteWheel::<u8>::new();
     /// ```
     pub fn new() -> RouletteWheel<T> {
         RouletteWheel {
@@ -68,8 +68,7 @@ impl<T> RouletteWheel<T> {
     /// ```
     /// use roulette_wheel::RouletteWheel;
     ///
-    /// let numbers: Vec<_> = (0..20).collect();
-    /// let rw: RouletteWheel<u8> = RouletteWheel::with_capacity(numbers.len());
+    /// let rw = RouletteWheel::<u8>::with_capacity(15);
     ///
     /// assert_eq!(rw.len(), 0);
     /// ```
@@ -81,15 +80,14 @@ impl<T> RouletteWheel<T> {
         }
     }
 
-    /// Reserves capacity for at least `additional` more elements to be inserted
-    /// in the given `Ringbuf`.
+    /// Reserves capacity for at least `additional` more elements to be inserted.
     /// The collection may reserve more space to avoid frequent reallocations.
     /// # Example
     ///
     /// ```
     /// use roulette_wheel::RouletteWheel;
     ///
-    /// let mut rw: RouletteWheel<u8> = RouletteWheel::new();
+    /// let mut rw = RouletteWheel::<u8>::new();
     /// rw.reserve(20);
     ///
     /// assert_eq!(rw.len(), 0);
@@ -99,19 +97,13 @@ impl<T> RouletteWheel<T> {
         self.population.reserve(additional);
     }
 
-    /// returns the number of elements in the wheel.
+    /// Returns the number of elements in the wheel.
     /// # Example
     ///
     /// ```
     /// use roulette_wheel::RouletteWheel;
     ///
-    /// let mut rw = RouletteWheel::new();
-    ///
-    /// assert_eq!(rw.len(), 0);
-    ///
-    /// rw.push(1.0, 'r');
-    /// rw.push(1.0, 'c');
-    /// rw.push(1.0, 'a');
+    /// let rw: RouletteWheel<_> = [(0.1, 10), (0.2, 15), (0.5, 20)].iter().cloned().collect();
     ///
     /// assert_eq!(rw.len(), 3);
     /// ```
@@ -119,37 +111,31 @@ impl<T> RouletteWheel<T> {
         self.population.len()
     }
 
-    /// returns `true` if empty else return `false`.
+    /// Returns `true` if empty else return `false`.
     /// # Example
     ///
     /// ```
     /// use roulette_wheel::RouletteWheel;
     ///
-    /// let mut rw = RouletteWheel::new();
+    /// let empty_rw = RouletteWheel::<u8>::new();
     ///
-    /// assert_eq!(rw.is_empty(), true);
+    /// assert_eq!(empty_rw.is_empty(), true);
     ///
-    /// rw.push(1.0, 'r');
-    /// rw.push(1.0, 'c');
-    /// rw.push(1.0, 'a');
+    /// let non_empty_rw: RouletteWheel<_> = [(0.1, 10), (0.2, 15), (0.5, 20)].iter().cloned().collect();
     ///
-    /// assert_eq!(rw.is_empty(), false);
+    /// assert_eq!(non_empty_rw.is_empty(), false);
     /// ```
     pub fn is_empty(&self) -> bool {
         self.population.is_empty()
     }
 
-    /// remove all elements in this wheel.
+    /// Remove all elements in this wheel.
     /// # Example
     ///
     /// ```
     /// use roulette_wheel::RouletteWheel;
     ///
-    /// let mut rw = RouletteWheel::new();
-    ///
-    /// rw.push(1.0, 'r');
-    /// rw.push(1.0, 'c');
-    /// rw.push(1.0, 'a');
+    /// let mut rw: RouletteWheel<_> = [(0.1, 10), (0.2, 15), (0.5, 20)].iter().cloned().collect();
     ///
     /// assert_eq!(rw.len(), 3);
     ///
@@ -162,7 +148,7 @@ impl<T> RouletteWheel<T> {
         self.population.clear();
     }
 
-    /// add an element associated with a probability.
+    /// Add an element associated with a probability.
     /// # Example
     ///
     /// ```
@@ -182,13 +168,29 @@ impl<T> RouletteWheel<T> {
         unsafe { self.unchecked_push(fitness, individual) }
     }
 
+    /// Add an element associated with a probability.
+    /// This unsafe function doesn't check for total fitness overflow
+    /// nether fitness positivity.
+    /// # Example
+    ///
+    /// ```
+    /// use roulette_wheel::RouletteWheel;
+    ///
+    /// let mut rw = RouletteWheel::new();
+    ///
+    /// unsafe { rw.unchecked_push(1.0, 'r') };
+    /// unsafe { rw.unchecked_push(1.0, 'c') };
+    /// unsafe { rw.unchecked_push(1.0, 'a') };
+    ///
+    /// assert_eq!(rw.len(), 3);
+    /// ```
     pub unsafe fn unchecked_push(&mut self, fitness: f32, individual: T) {
         self.total_fitness += fitness;
         self.fitnesses.push(fitness);
         self.population.push(individual);
     }
 
-    /// Returns sum of all individual fitnesses.
+    /// Returns the sum of all individual fitnesses.
     /// # Example
     ///
     /// ```

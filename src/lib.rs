@@ -3,13 +3,7 @@
 //!
 //! ![Fitness proportionate selection](https://upload.wikimedia.org/wikipedia/commons/2/2a/Fitness_proportionate_selection_example.png)
 //!
-//! TODO implement this
-//! http://www.keithschwarz.com/interesting/code/?dir=alias-method
-//!
 //! # Usage
-//!
-//! You can get this package on the
-//! [crates.io/roulette-wheel](https://crates.io/crates/roulette-wheel) page.
 //!
 //! # Examples
 //!
@@ -21,10 +15,7 @@
 //! let rw: RouletteWheel<u8> = RouletteWheel::new();
 //! ```
 //!
-//! You can `push` values onto the roulette-wheel (which will grow the wheel as needed):
-//!
-//! Popping values works in much the same way:
-//!
+//! You can `push` values in the roulette-wheel (which will grow the wheel as needed):
 //! ```
 //! use roulette_wheel::RouletteWheel;
 //!
@@ -33,8 +24,16 @@
 //! rw.push(5., 'a');
 //! rw.push(1., 'b');
 //!
-//! // you have 5 chances out of 6 to pop 'a'
-//! let a_or_b = rw.pop();
+//! // iter will not consume the roulette wheel
+//! for (fit, &ind) in rw.iter() {
+//!    // do things with individuals here
+//! }
+//!
+//! // into_iter consume the roulette wheel
+//! for (fit, ind) in rw.into_iter() {
+//!     // do things with individuals here
+//! }
+//!
 //! ```
 
 extern crate rand;
