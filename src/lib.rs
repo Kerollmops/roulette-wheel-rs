@@ -361,7 +361,7 @@ impl<R: Rng, T> Iterator for IntoSelectIter<R, T> {
 mod tests {
     use rand::SeedableRng;
     use rand::StdRng;
-    use {RouletteWheel, SelectIter};
+    use {RouletteWheel, SelectIter, IntoSelectIter};
 
     const SEED: [usize; 4] = [4, 2, 42, 4242];
 
@@ -381,5 +381,25 @@ mod tests {
         assert_eq!(iter.next(), Some((0.4, &18)));
         assert_eq!(iter.next(), Some((0.2, &16)));
         assert_eq!(iter.next(), Some((0.1, &15)));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn into_select_iter_seeded() {
+        let rng = StdRng::from_seed(&SEED);
+
+        let fitnesses = [0.1, 0.2, 0.3, 0.4, 0.5];
+        let fitnesses = fitnesses.iter().cloned();
+        let population = 15..20;
+        let rw: RouletteWheel<_> = fitnesses.zip(population).collect();
+
+        let mut iter = IntoSelectIter::from_rng(rw, rng);
+
+        assert_eq!(iter.next(), Some((0.5, 19)));
+        assert_eq!(iter.next(), Some((0.3, 17)));
+        assert_eq!(iter.next(), Some((0.4, 18)));
+        assert_eq!(iter.next(), Some((0.2, 16)));
+        assert_eq!(iter.next(), Some((0.1, 15)));
+        assert_eq!(iter.next(), None);
     }
 }
