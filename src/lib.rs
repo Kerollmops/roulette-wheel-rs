@@ -402,4 +402,18 @@ mod tests {
         assert_eq!(iter.next(), Some((0.1, 15)));
         assert_eq!(iter.next(), None);
     }
+
+    #[test]
+    fn test_len() {
+        let mut rw = RouletteWheel::<u8>::new();
+
+        assert_eq!(rw.len(), 0);
+
+        rw.push(0.1, 1);
+        rw.push(0.1, 1);
+        rw.push(0.1, 1);
+        rw.push(0.1, 1);
+
+        assert_eq!(rw.len(), 4);
+    }
 }
