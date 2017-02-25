@@ -58,19 +58,8 @@ impl<T: Clone> Clone for RouletteWheel<T> {
 
 impl<T> FromIterator<(f32, T)> for RouletteWheel<T> {
     fn from_iter<A>(iter: A) -> Self where A: IntoIterator<Item=(f32, T)> {
-        let iter = iter.into_iter();
-        let (lower, _) = iter.size_hint();
-
-        let mut total_fitness = 0.0;
-        let mut fitnesses = Vec::with_capacity(lower);
-        let mut population = Vec::with_capacity(lower);
-
-        for (fitness, individual) in iter {
-            total_fitness += fitness;
-            fitnesses.push(fitness);
-            population.push(individual);
-        }
-
+        let (fitnesses, population): (Vec<f32>, _) = iter.into_iter().unzip();
+        let total_fitness = fitnesses.iter().sum();
         RouletteWheel { total_fitness, fitnesses, population }
     }
 }
