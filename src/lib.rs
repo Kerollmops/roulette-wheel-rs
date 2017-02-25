@@ -5,32 +5,33 @@
 //!
 //! # Examples usages
 //!
-//! You can explicitly create a `RouletteWheel<T>` with `new()`:
-//!
 //! ```
 //! use roulette_wheel::RouletteWheel;
 //!
-//! let rw = RouletteWheel::<u8>::new();
-//! ```
+//! fn evaluate(individual: &i32) -> f32 { *individual as f32 } // mmm...!
 //!
-//! You can `push` values in the roulette-wheel (which will grow the wheel as needed):
+//! let population: Vec<_> = (1..10).into_iter().collect();
+//! let fitnesses: Vec<_> = population.iter().map(|ind| evaluate(ind)).collect();
 //!
-//! ```
-//! use roulette_wheel::RouletteWheel;
-//! use std::iter;
+//! let rw: RouletteWheel<_> = fitnesses.into_iter().zip(population).collect();
 //!
-//! let rw: RouletteWheel<_> = iter::repeat(1.0).zip(1..5).collect();
+//! // let's collect the individuals in the order in which the roulette wheel gives them
+//! let individuals: Vec<_> = rw.into_iter().map(|(_, ind)| ind).collect();
+//! // rw.select_iter() will not consume the roulette wheel
+//! // while rw.into_iter() will !
 //!
-//! // .select_iter() will not consume the roulette wheel
-//! for (fit, &ind) in rw.select_iter() {
-//!    // do things with individuals here
-//! }
+//! fn crossover(mother: &i32, _father: &i32) -> i32 { mother.clone() } // unimplemented!()
 //!
-//! // .into_iter() consume the roulette wheel
-//! for (fit, ind) in rw {
-//!     // do things with individuals here
-//! }
-//!
+//! // now merge each individual by couples
+//! let new_population: Vec<_> = individuals.chunks(2)
+//!                                  .filter(|couple| couple.len() == 2)
+//!                                  .map(|couple| {
+//!                                       let (mother, father) = (couple[0], couple[1]);
+//!                                       crossover(&mother, &father)
+//!                                       // note: for this example we return only one individual,
+//!                                       //       the population will shrink
+//!                                       //       .flat_map() can resolve this issue
+//!                                   }).collect();
 //! ```
 
 extern crate rand;
@@ -168,6 +169,12 @@ impl<T> RouletteWheel<T> {
     }
 
     /// Add an element associated with a probability.
+    ///
+    /// # Panics
+    ///
+    /// This function might panic if the fitness is less than zero
+    /// or if the total fitness gives a non-finite fitness (`Inf`).
+    ///
     /// # Example
     ///
     /// ```
@@ -227,11 +234,31 @@ impl<T> RouletteWheel<T> {
         self.total_fitness
     }
 
+    /// Returns an iterator over the RouletteWheel.
+    ///
+    /// # Examples
+    ///
+    /// ``` ignore
+    /// use roulette_wheel::RouletteWheel;
+    ///
+    /// let rw: RouletteWheel<_> = [(0.1, 10), (0.2, 15), (0.5, 20)].iter().cloned().collect();
+    /// let mut iterator = rw.select_iter();
+    ///
+    /// assert_eq!(iterator.next(), Some((0.5, &20)));
+    /// assert_eq!(iterator.next(), Some((0.1, &10)));
+    /// assert_eq!(iterator.next(), Some((0.2, &15)));
+    /// assert_eq!(iterator.next(), None);
+    /// ```
     pub fn select_iter(&self) -> SelectIter<ThreadRng, T> {
         SelectIter::<ThreadRng, _>::new(&self)
     }
 }
 
+/// Immutable RouletteWheel iterator
+///
+/// This struct is created by the [`select_iter`].
+///
+/// [`iter`]: struct.RouletteWheel.html#method.select_iter
 pub struct SelectIter<'a, R: Rng, T: 'a> {
     distribution_range: Range<f32>,
     rng: R,
@@ -288,6 +315,13 @@ impl<T> IntoIterator for RouletteWheel<T> {
     }
 }
 
+/// An iterator that moves out of a RouletteWheel.
+///
+/// This `struct` is created by the `into_iter` method on [`RouletteWheel`][`RouletteWheel`] (provided
+/// by the [`IntoIterator`] trait).
+///
+/// [`RouletteWheel`]: struct.RouletteWheel.html
+/// [`IntoIterator`]: https://doc.rust-lang.org/std/iter/trait.IntoIterator.html
 pub struct IntoSelectIter<R: Rng, T> {
     distribution_range: Range<f32>,
     rng: R,
