@@ -1,6 +1,6 @@
 [package]
 name = "roulette-wheel"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Kero <renault.cle@gmail.com>"]
 documentation = "http://docs.rs/roulette-wheel"
 description = """
