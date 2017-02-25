@@ -71,14 +71,7 @@ impl<T> FromIterator<(f32, T)> for RouletteWheel<T> {
             population.push(individual);
         }
 
-        RouletteWheel {
-            total_fitness: total_fitness,
-            fitnesses: fitnesses,
-            population: population
-        }
-
-        // #![feature(field_init_shorthand)]
-        // RouletteWheel { total_fitness, fitnesses, population }
+        RouletteWheel { total_fitness, fitnesses, population }
     }
 }
 
