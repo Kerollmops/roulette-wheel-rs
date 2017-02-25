@@ -61,7 +61,11 @@ impl<T> FromIterator<(f32, T)> for RouletteWheel<T> {
     fn from_iter<A>(iter: A) -> Self where A: IntoIterator<Item=(f32, T)> {
         let (fitnesses, population): (Vec<f32>, _) = iter.into_iter().unzip();
         let total_fitness = fitnesses.iter().sum();
-        RouletteWheel { total_fitness, fitnesses, population }
+        RouletteWheel {
+            total_fitness: total_fitness,
+            fitnesses: fitnesses,
+            population: population
+        }
     }
 }
 
