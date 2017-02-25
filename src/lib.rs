@@ -3,34 +3,31 @@
 //!
 //! ![Fitness proportionate selection](https://upload.wikimedia.org/wikipedia/commons/2/2a/Fitness_proportionate_selection_example.png)
 //!
-//! # Usage
-//!
-//! # Examples
+//! # Examples usages
 //!
 //! You can explicitly create a `RouletteWheel<T>` with `new()`:
 //!
 //! ```
 //! use roulette_wheel::RouletteWheel;
 //!
-//! let rw: RouletteWheel<u8> = RouletteWheel::new();
+//! let rw = RouletteWheel::<u8>::new();
 //! ```
 //!
 //! You can `push` values in the roulette-wheel (which will grow the wheel as needed):
+//!
 //! ```
 //! use roulette_wheel::RouletteWheel;
+//! use std::iter;
 //!
-//! let mut rw = RouletteWheel::new();
+//! let rw: RouletteWheel<_> = iter::repeat(1.0).zip(1..5).collect();
 //!
-//! rw.push(5., 'a');
-//! rw.push(1., 'b');
-//!
-//! // .iter() will not consume the roulette wheel
-//! for (fit, &ind) in rw.iter() {
+//! // .select_iter() will not consume the roulette wheel
+//! for (fit, &ind) in rw.select_iter() {
 //!    // do things with individuals here
 //! }
 //!
 //! // .into_iter() consume the roulette wheel
-//! for (fit, ind) in rw.into_iter() {
+//! for (fit, ind) in rw {
 //!     // do things with individuals here
 //! }
 //!
